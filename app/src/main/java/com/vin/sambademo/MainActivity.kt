@@ -5,6 +5,10 @@ import androidx.appcompat.app.AppCompatActivity
 import jcifs.smb.SmbException
 import jcifs.smb.SmbFile
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.net.MalformedURLException
 
 
@@ -14,11 +18,13 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         bFiles.setOnClickListener {
-            loadSamba()
+            CoroutineScope(Dispatchers.IO).launch {
+                loadSamba()
+            }
         }
     }
 
-    private fun loadSamba() {
+    private suspend fun loadSamba() {
         //-----------------------[code]---------------------------------//
         val domains: Array<SmbFile>
         try {
@@ -42,7 +48,7 @@ class MainActivity : AppCompatActivity() {
         //------------------------[/code]----------------------------------------//
     }
 
-    private fun appendText(text: String) {
+    private suspend fun appendText(text: String) = withContext(Dispatchers.Main){
         tvMsg.append(text + "\n")
     }
 }
