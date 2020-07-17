@@ -13,7 +13,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        loadSamba()
+        bFiles.setOnClickListener {
+            loadSamba()
+        }
     }
 
     private fun loadSamba() {
