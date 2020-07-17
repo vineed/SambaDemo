@@ -2,6 +2,9 @@ package com.vin.sambademo
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import jcifs.CIFSContext
+import jcifs.context.SingletonContext
+import jcifs.smb.NtlmPasswordAuthentication
 import jcifs.smb.SmbException
 import jcifs.smb.SmbFile
 import kotlinx.android.synthetic.main.activity_main.*
@@ -26,9 +29,15 @@ class MainActivity : AppCompatActivity() {
 
     private suspend fun loadSamba() {
         //-----------------------[code]---------------------------------//
-        val domains: Array<SmbFile>
         try {
-            domains = SmbFile("smb://192.168.2.190").listFiles()
+            val base: CIFSContext = SingletonContext.getInstance()
+            val auth = base.withAnonymousCredentials()
+            /*val authed1 =
+                base.withCredentials(NtlmPasswordAuthentication(base, "", "", ""))*/
+
+            val domains: Array<SmbFile> =
+                SmbFile("smb://192.168.2.190/forbes_logo", auth).listFiles()
+
             for (i in domains.indices) {
                 println(domains[i])
                 appendText(domains[i].toString())
@@ -48,7 +57,7 @@ class MainActivity : AppCompatActivity() {
         //------------------------[/code]----------------------------------------//
     }
 
-    private suspend fun appendText(text: String) = withContext(Dispatchers.Main){
+    private suspend fun appendText(text: String) = withContext(Dispatchers.Main) {
         tvMsg.append(text + "\n")
     }
 }
