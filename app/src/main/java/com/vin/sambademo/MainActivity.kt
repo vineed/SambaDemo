@@ -10,9 +10,11 @@ import com.hierynomus.smbj.session.Session
 import com.hierynomus.smbj.share.DiskShare
 import com.hierynomus.smbj.share.File
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.FileOutputStream
-import java.io.FileWriter
 import java.util.*
 import kotlin.collections.HashSet
 
@@ -65,13 +67,23 @@ class MainActivity : AppCompatActivity() {
                         null
                     )
 
-                    val bufReader = remoteSmbjFile.inputStream.buffered()
+                    /*val bufReader = remoteSmbjFile.inputStream.buffered()
 
                     val bufWriter = FileOutputStream(JFile(localPath, fileName)).buffered()
 
                     bufReader.use { reader ->
                         bufWriter.use { writer ->
                             reader.copyTo(writer)
+                        }
+                    }*/
+
+                    remoteSmbjFile.inputStream.use { `is` ->
+                        FileOutputStream(JFile(localPath, fileName)).use { os ->
+                            val buffer = ByteArray(1024)
+                            var length: Int
+                            while (`is`.read(buffer).also { length = it } > 0) {
+                                os.write(buffer, 0, length)
+                            }
                         }
                     }
                 }
