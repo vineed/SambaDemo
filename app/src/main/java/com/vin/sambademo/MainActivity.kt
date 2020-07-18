@@ -37,7 +37,7 @@ class MainActivity : AppCompatActivity() {
             val ac = AuthenticationContext.anonymous()
             //AuthenticationContext("", "".toCharArray(), "")
             val session: Session = connection.authenticate(ac)
-            val SHARE_NAME = "forbes_logo/"
+            val SHARE_NAME = "vin"
 
             // Connect to Share
             val diskShare = session.connectShare(SHARE_NAME) as DiskShare?
@@ -54,9 +54,11 @@ class MainActivity : AppCompatActivity() {
                     println("File : $fileName")
                     appendTextWithContext("File : $fileName")
 
-                    val remoteSmbjFile: File = diskShare.openFile(
-                        SHARE_NAME + fileName,
-                        EnumSet.of(AccessMask.GENERIC_READ),
+                    if(fileName == "." || fileName == "..") continue
+
+                    val remoteSmbjFile: File = it.openFile(
+                        "$fileName",
+                        EnumSet.of(AccessMask.GENERIC_ALL),
                         null,
                         smbShareSet,
                         null,
