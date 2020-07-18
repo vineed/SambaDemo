@@ -2,18 +2,21 @@ package com.vin.sambademo
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import com.hierynomus.msdtyp.AccessMask
+import com.hierynomus.mssmb2.SMB2ShareAccess
 import com.hierynomus.smbj.SMBClient
 import com.hierynomus.smbj.auth.AuthenticationContext
 import com.hierynomus.smbj.session.Session
 import com.hierynomus.smbj.share.DiskShare
+import com.hierynomus.smbj.share.File
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.IOException
-import java.net.MalformedURLException
+import kotlinx.coroutines.*
+import java.io.FileOutputStream
+import java.io.FileWriter
+import java.util.*
+import kotlin.collections.HashSet
 
+typealias JFile = java.io.File
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,16 +37,44 @@ class MainActivity : AppCompatActivity() {
             val ac = AuthenticationContext.anonymous()
             //AuthenticationContext("", "".toCharArray(), "")
             val session: Session = connection.authenticate(ac)
+            val SHARE_NAME = "forbes_logo/"
 
             // Connect to Share
-            val diskShare = session.connectShare("forbes_logo") as DiskShare?
+            val diskShare = session.connectShare(SHARE_NAME) as DiskShare?
+
+            val smbShareSet: MutableSet<SMB2ShareAccess> = HashSet()
+            smbShareSet.add(SMB2ShareAccess.ALL.iterator().next()) // this is to get READ only
+
+            val localPath = JFile(filesDir, "temp")
+            localPath.mkdir()
 
             diskShare?.let {
-                for (f in it.list("")) {
-                    println("File : " + f.fileName)
-                    appendTextWithContext("File : " + f.fileName)
+                for (fileIdBothDirectoryInformation in it.list("")) {
+                    val fileName = fileIdBothDirectoryInformation.fileName
+                    println("File : $fileName")
+                    appendTextWithContext("File : $fileName")
+
+                    val remoteSmbjFile: File = diskShare.openFile(
+                        SHARE_NAME + fileName,
+                        EnumSet.of(AccessMask.GENERIC_READ),
+                        null,
+                        smbShareSet,
+                        null,
+                        null
+                    )
+
+                    val bufReader = remoteSmbjFile.inputStream.buffered()
+
+                    val bufWriter = FileOutputStream(JFile(localPath, fileName)).buffered()
+
+                    bufReader.use { reader ->
+                        bufWriter.use { writer ->
+                            reader.copyTo(writer)
+                        }
+                    }
                 }
             }
+
         }
     }
 
