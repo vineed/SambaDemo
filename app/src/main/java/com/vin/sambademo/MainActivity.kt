@@ -3,8 +3,10 @@ package com.vin.sambademo
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.hierynomus.msdtyp.AccessMask
+import com.hierynomus.msfscc.FileAttributes
 import com.hierynomus.mssmb2.SMB2CreateDisposition
 import com.hierynomus.mssmb2.SMB2ShareAccess
+import com.hierynomus.protocol.commons.EnumWithValue
 import com.hierynomus.smbj.SMBClient
 import com.hierynomus.smbj.SmbConfig
 import com.hierynomus.smbj.auth.AuthenticationContext
@@ -60,7 +62,7 @@ class MainActivity : AppCompatActivity() {
                     println("File : $fileName")
                     appendTextWithContext("File : $fileName")
 
-                    if(fileName == "." || fileName == "..") continue
+                    if (fileName == "." || fileName == "..") continue
 
                     val remoteSmbjFile: File = it.openFile(
                         "$fileName",
@@ -105,7 +107,7 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-fun main(arr:Array<String>) {
+fun main(arr: Array<String>) {
     val config = SmbConfig.builder().withTimeout(120, TimeUnit.SECONDS)
         .withTimeout(
             120,
@@ -129,44 +131,53 @@ fun main(arr:Array<String>) {
         smbShareSet.addAll(SMB2ShareAccess.ALL)//.iterator().next()) // this is to get READ only
 
         val localPath = JFile("C:\\Users\\Administrator\\Desktop", "temp")
-        if(localPath.exists()) localPath.deleteRecursively()
+        if (localPath.exists()) localPath.deleteRecursively()
         localPath.mkdir()
 
         diskShare?.let {
-            for (fileIdBothDirectoryInformation in it.list("")) {
-                val fileName = fileIdBothDirectoryInformation.fileName
-                println("File : $fileName")
+            addFileRecursively(localPath, "", it)
+        }
+    }
+}
 
-                if (fileName == "." || fileName == "..") continue
 
-                val remoteSmbjFile: File = it.openFile(
-                    "$fileName",
-                    EnumSet.of(AccessMask.GENERIC_ALL),
-                    null,
-                    SMB2ShareAccess.ALL,
-                    SMB2CreateDisposition.FILE_OPEN,
-                    null
-                )
+fun addFileRecursively(localRoot: JFile, dir: String, diskShare: DiskShare) {
+    for (fileIdBothDirectoryInformation in diskShare.list(dir)) {
+        val fileName = fileIdBothDirectoryInformation.fileName
+        println("File : $fileName")
 
-                val bufReader = remoteSmbjFile.inputStream.buffered()
+        if (fileName == "." || fileName == "..") continue
 
-                val bufWriter = FileOutputStream(JFile(localPath, fileName)).buffered()
+        if (EnumWithValue.EnumUtils.isSet(
+                fileIdBothDirectoryInformation.fileAttributes,
+                FileAttributes.FILE_ATTRIBUTE_DIRECTORY
+            )
+        ) {
+            addFileRecursively(localRoot, fileName, diskShare)
+            continue
+        }
 
-                /*bufReader.use { reader ->
-                    bufWriter.use { writer ->
-                        reader.copyTo(writer)
-                    }
-                }*/
+        val remoteSmbjFile: File = diskShare.openFile(
+            "$fileName",
+            EnumSet.of(AccessMask.GENERIC_ALL),
+            null,
+            SMB2ShareAccess.ALL,
+            SMB2CreateDisposition.FILE_OPEN,
+            null
+        )
 
-                remoteSmbjFile.inputStream.use { `is` ->
-                    FileOutputStream(JFile(localPath, fileName)).use { os ->
-                        val buffer = ByteArray(1024)
-                        var length: Int
-                        while (`is`.read(buffer).also { length = it } > 0) {
-                            os.write(buffer, 0, length)
-                        }
-                    }
-                }
+        val bufReader = remoteSmbjFile.inputStream.buffered()
+
+        val bufWriter = FileOutputStream(
+            JFile(
+                if (dir.isBlank()) localRoot else JFile(localRoot, dir).apply { mkdirs() },
+                fileName
+            )
+        ).buffered()
+
+        bufReader.use { reader ->
+            bufWriter.use { writer ->
+                reader.copyTo(writer)
             }
         }
     }
