@@ -153,12 +153,12 @@ fun addFileRecursively(localRoot: JFile, dir: String, diskShare: DiskShare) {
                 FileAttributes.FILE_ATTRIBUTE_DIRECTORY
             )
         ) {
-            addFileRecursively(JFile(localRoot, dir), fileName, diskShare)
+            addFileRecursively(JFile(localRoot, fileName), if(dir.isBlank()) fileName else "$dir\\$fileName", diskShare)
             continue
         }
 
         val remoteSmbjFile: File = diskShare.openFile(
-            "$fileName",
+            if(dir.isBlank()) fileName else "$dir\\$fileName",
             EnumSet.of(AccessMask.GENERIC_ALL),
             null,
             SMB2ShareAccess.ALL,
@@ -170,7 +170,7 @@ fun addFileRecursively(localRoot: JFile, dir: String, diskShare: DiskShare) {
 
         val bufWriter = FileOutputStream(
             JFile(
-                JFile(localRoot, dir).apply { mkdirs() },
+                localRoot.apply { mkdirs() },
                 fileName
             )
         ).buffered()
