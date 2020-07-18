@@ -3,8 +3,10 @@ package com.vin.sambademo
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.hierynomus.msdtyp.AccessMask
+import com.hierynomus.mssmb2.SMB2CreateDisposition
 import com.hierynomus.mssmb2.SMB2ShareAccess
 import com.hierynomus.smbj.SMBClient
+import com.hierynomus.smbj.SmbConfig
 import com.hierynomus.smbj.auth.AuthenticationContext
 import com.hierynomus.smbj.session.Session
 import com.hierynomus.smbj.share.DiskShare
@@ -16,7 +18,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileOutputStream
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.collections.HashSet
+
 
 typealias JFile = java.io.File
 
@@ -45,7 +49,7 @@ class MainActivity : AppCompatActivity() {
             val diskShare = session.connectShare(SHARE_NAME) as DiskShare?
 
             val smbShareSet: MutableSet<SMB2ShareAccess> = HashSet()
-            smbShareSet.add(SMB2ShareAccess.ALL.iterator().next()) // this is to get READ only
+            smbShareSet.addAll(SMB2ShareAccess.ALL)//.iterator().next()) // this is to get READ only
 
             val localPath = JFile(filesDir, "temp")
             localPath.mkdir()
@@ -60,14 +64,14 @@ class MainActivity : AppCompatActivity() {
 
                     val remoteSmbjFile: File = it.openFile(
                         "$fileName",
-                        EnumSet.of(AccessMask.GENERIC_ALL),
+                        EnumSet.of(AccessMask.GENERIC_READ),
                         null,
                         smbShareSet,
                         null,
                         null
                     )
 
-                    /*val bufReader = remoteSmbjFile.inputStream.buffered()
+                    val bufReader = remoteSmbjFile.inputStream.buffered()
 
                     val bufWriter = FileOutputStream(JFile(localPath, fileName)).buffered()
 
@@ -75,9 +79,9 @@ class MainActivity : AppCompatActivity() {
                         bufWriter.use { writer ->
                             reader.copyTo(writer)
                         }
-                    }*/
+                    }
 
-                    remoteSmbjFile.inputStream.use { `is` ->
+                    /*remoteSmbjFile.inputStream.use { `is` ->
                         FileOutputStream(JFile(localPath, fileName)).use { os ->
                             val buffer = ByteArray(1024)
                             var length: Int
@@ -85,7 +89,7 @@ class MainActivity : AppCompatActivity() {
                                 os.write(buffer, 0, length)
                             }
                         }
-                    }
+                    }*/
                 }
             }
 
@@ -98,5 +102,72 @@ class MainActivity : AppCompatActivity() {
 
     private fun appendText(text: String) {
         tvMsg.append(text + "\n")
+    }
+}
+
+fun main(arr:Array<String>) {
+    val config = SmbConfig.builder().withTimeout(120, TimeUnit.SECONDS)
+        .withTimeout(
+            120,
+            TimeUnit.SECONDS
+        ) // Timeout sets read, write and Transact timeouts (default is 60 seconds)
+        .withSoTimeout(180, TimeUnit.SECONDS) // Socket timeout (default is 0 seconds)
+        .build()
+
+    val client = SMBClient(config)
+
+    client.connect("192.168.2.190").use { connection ->
+        val ac = AuthenticationContext.anonymous()
+        //AuthenticationContext("", "".toCharArray(), "")
+        val session: Session = connection.authenticate(ac)
+        val SHARE_NAME = "vin"
+
+        // Connect to Share
+        val diskShare = session.connectShare(SHARE_NAME) as DiskShare?
+
+        val smbShareSet: MutableSet<SMB2ShareAccess> = HashSet()
+        smbShareSet.addAll(SMB2ShareAccess.ALL)//.iterator().next()) // this is to get READ only
+
+        val localPath = JFile("C:\\Users\\Administrator\\Desktop", "temp")
+        if(localPath.exists()) localPath.deleteRecursively()
+        localPath.mkdir()
+
+        diskShare?.let {
+            for (fileIdBothDirectoryInformation in it.list("")) {
+                val fileName = fileIdBothDirectoryInformation.fileName
+                println("File : $fileName")
+
+                if (fileName == "." || fileName == "..") continue
+
+                val remoteSmbjFile: File = it.openFile(
+                    "$fileName",
+                    EnumSet.of(AccessMask.GENERIC_ALL),
+                    null,
+                    SMB2ShareAccess.ALL,
+                    SMB2CreateDisposition.FILE_OPEN,
+                    null
+                )
+
+                val bufReader = remoteSmbjFile.inputStream.buffered()
+
+                val bufWriter = FileOutputStream(JFile(localPath, fileName)).buffered()
+
+                /*bufReader.use { reader ->
+                    bufWriter.use { writer ->
+                        reader.copyTo(writer)
+                    }
+                }*/
+
+                remoteSmbjFile.inputStream.use { `is` ->
+                    FileOutputStream(JFile(localPath, fileName)).use { os ->
+                        val buffer = ByteArray(1024)
+                        var length: Int
+                        while (`is`.read(buffer).also { length = it } > 0) {
+                            os.write(buffer, 0, length)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
