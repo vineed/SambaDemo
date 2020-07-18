@@ -153,7 +153,7 @@ fun addFileRecursively(localRoot: JFile, dir: String, diskShare: DiskShare) {
                 FileAttributes.FILE_ATTRIBUTE_DIRECTORY
             )
         ) {
-            addFileRecursively(localRoot, fileName, diskShare)
+            addFileRecursively(JFile(localRoot, dir), fileName, diskShare)
             continue
         }
 
@@ -170,7 +170,7 @@ fun addFileRecursively(localRoot: JFile, dir: String, diskShare: DiskShare) {
 
         val bufWriter = FileOutputStream(
             JFile(
-                if (dir.isBlank()) localRoot else JFile(localRoot, dir).apply { mkdirs() },
+                JFile(localRoot, dir).apply { mkdirs() },
                 fileName
             )
         ).buffered()
