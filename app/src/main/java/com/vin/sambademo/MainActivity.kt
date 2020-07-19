@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun loadSambaWithSMBJ() {
+    private fun loadSambaWithSMBJ() {
         val client = SMBClient()
 
         client.connect("192.168.2.190").use { connection ->
@@ -57,42 +57,7 @@ class MainActivity : AppCompatActivity() {
             localPath.mkdir()
 
             diskShare?.let {
-                for (fileIdBothDirectoryInformation in it.list("")) {
-                    val fileName = fileIdBothDirectoryInformation.fileName
-                    println("File : $fileName")
-                    appendTextWithContext("File : $fileName")
-
-                    if (fileName == "." || fileName == "..") continue
-
-                    val remoteSmbjFile: File = it.openFile(
-                        "$fileName",
-                        EnumSet.of(AccessMask.GENERIC_READ),
-                        null,
-                        smbShareSet,
-                        null,
-                        null
-                    )
-
-                    val bufReader = remoteSmbjFile.inputStream.buffered()
-
-                    val bufWriter = FileOutputStream(JFile(localPath, fileName)).buffered()
-
-                    bufReader.use { reader ->
-                        bufWriter.use { writer ->
-                            reader.copyTo(writer)
-                        }
-                    }
-
-                    /*remoteSmbjFile.inputStream.use { `is` ->
-                        FileOutputStream(JFile(localPath, fileName)).use { os ->
-                            val buffer = ByteArray(1024)
-                            var length: Int
-                            while (`is`.read(buffer).also { length = it } > 0) {
-                                os.write(buffer, 0, length)
-                            }
-                        }
-                    }*/
-                }
+                addFileRecursively(localPath, "", it)
             }
 
         }
@@ -153,12 +118,16 @@ fun addFileRecursively(localRoot: JFile, dir: String, diskShare: DiskShare) {
                 FileAttributes.FILE_ATTRIBUTE_DIRECTORY
             )
         ) {
-            addFileRecursively(JFile(localRoot, fileName), if(dir.isBlank()) fileName else "$dir\\$fileName", diskShare)
+            addFileRecursively(
+                JFile(localRoot, fileName),
+                if (dir.isBlank()) fileName else "$dir\\$fileName",
+                diskShare
+            )
             continue
         }
 
         val remoteSmbjFile: File = diskShare.openFile(
-            if(dir.isBlank()) fileName else "$dir\\$fileName",
+            if (dir.isBlank()) fileName else "$dir\\$fileName",
             EnumSet.of(AccessMask.GENERIC_ALL),
             null,
             SMB2ShareAccess.ALL,
