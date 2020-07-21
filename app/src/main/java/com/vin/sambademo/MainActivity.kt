@@ -34,7 +34,8 @@ class MainActivity : AppCompatActivity() {
 
         bFiles.setOnClickListener {
             CoroutineScope(Dispatchers.IO).launch {
-                val modifiedOn = System.currentTimeMillis()
+                var modifiedOn = System.currentTimeMillis()
+                modifiedOn -= modifiedOn%1000 // skimming nanoseconds part
 
                 loadSambaWithSMBJ(modifiedOn)
 
@@ -47,7 +48,11 @@ class MainActivity : AppCompatActivity() {
                             it.delete()
                         }
 
-                    //if (file.listFiles()?.isEmpty() == true) file.delete()
+
+                }
+
+                localPath.listFiles()?.forEach { file->
+                    if (file.listFiles()?.isEmpty() == true) file.delete()
                 }
             }
         }
@@ -134,8 +139,11 @@ fun addFileRecursively(localRoot: JFile, dir: String, diskShare: DiskShare, modi
         ) {
             val fileDir = JFile(localRoot, fileName)
 
-            if (fileDir.exists() && fileDir.lastModified() < modifiedOn) {
+            if (fileDir.exists()) {
                 fileDir.setLastModified(modifiedOn)
+            }
+            else{
+                fileDir.mkdir()
             }
 
             addFileRecursively(
