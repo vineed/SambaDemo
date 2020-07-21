@@ -132,8 +132,14 @@ fun addFileRecursively(localRoot: JFile, dir: String, diskShare: DiskShare, modi
                 FileAttributes.FILE_ATTRIBUTE_DIRECTORY
             )
         ) {
+            val fileDir = JFile(localRoot, fileName)
+
+            if (fileDir.exists() && fileDir.lastModified() < modifiedOn) {
+                fileDir.setLastModified(modifiedOn)
+            }
+
             addFileRecursively(
-                JFile(localRoot, fileName),
+                fileDir,
                 if (dir.isBlank()) fileName else "$dir\\$fileName",
                 diskShare, modifiedOn
             )
