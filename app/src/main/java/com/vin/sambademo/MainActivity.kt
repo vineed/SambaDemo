@@ -1,6 +1,7 @@
 package com.vin.sambademo
 
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.hierynomus.msdtyp.AccessMask
 import com.hierynomus.msfscc.FileAttributes
@@ -41,10 +42,12 @@ class MainActivity : AppCompatActivity() {
                 val localPath = JFile(filesDir, "temp")
 
                 localPath.listFiles()?.forEach { file ->
-                    file.listFiles()?.filter { it.lastModified() <= modifiedOn }
-                        ?.forEach { it.delete() }
+                    file.listFiles()?.filter { it.lastModified() < modifiedOn }
+                        ?.forEach {
+                            it.delete()
+                        }
 
-                    if (file.listFiles()?.isEmpty() == true) file.delete()
+                    //if (file.listFiles()?.isEmpty() == true) file.delete()
                 }
             }
         }
@@ -164,6 +167,7 @@ fun addFileRecursively(localRoot: JFile, dir: String, diskShare: DiskShare, modi
                 }
             }
         } else {
+            Log.d("Touched", "Touched $file")
             file.setLastModified(modifiedOn)
         }
     }
