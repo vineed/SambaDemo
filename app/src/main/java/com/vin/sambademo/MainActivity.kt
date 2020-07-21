@@ -33,12 +33,24 @@ class MainActivity : AppCompatActivity() {
 
         bFiles.setOnClickListener {
             CoroutineScope(Dispatchers.IO).launch {
-                loadSambaWithSMBJ()
+                val modifiedOn = System.currentTimeMillis()
+
+                loadSambaWithSMBJ(modifiedOn)
+
+                //TODO recursively delete folder(s)/file(s) lesser than modifiedOn timestamp
+                val localPath = JFile(filesDir, "temp")
+
+                localPath.listFiles()?.forEach { file ->
+                    file.listFiles()?.filter { it.lastModified() <= modifiedOn }
+                        ?.forEach { it.delete() }
+
+                    if (file.listFiles()?.isEmpty() == true) file.delete()
+                }
             }
         }
     }
 
-    private fun loadSambaWithSMBJ() {
+    private fun loadSambaWithSMBJ(modifiedOn: Long) {
         val client = SMBClient()
 
         client.connect("192.168.2.190").use { connection ->
@@ -57,9 +69,8 @@ class MainActivity : AppCompatActivity() {
             localPath.mkdir()
 
             diskShare?.let {
-                addFileRecursively(localPath, "", it)
+                addFileRecursively(localPath, "", it, modifiedOn)
             }
-
         }
     }
 
@@ -100,13 +111,13 @@ fun main(arr: Array<String>) {
         localPath.mkdir()
 
         diskShare?.let {
-            addFileRecursively(localPath, "", it)
+            addFileRecursively(localPath, "", it, System.currentTimeMillis())
         }
     }
 }
 
 
-fun addFileRecursively(localRoot: JFile, dir: String, diskShare: DiskShare) {
+fun addFileRecursively(localRoot: JFile, dir: String, diskShare: DiskShare, modifiedOn: Long) {
     for (fileIdBothDirectoryInformation in diskShare.list(dir)) {
         val fileName = fileIdBothDirectoryInformation.fileName
         println("File : $fileName")
@@ -121,7 +132,7 @@ fun addFileRecursively(localRoot: JFile, dir: String, diskShare: DiskShare) {
             addFileRecursively(
                 JFile(localRoot, fileName),
                 if (dir.isBlank()) fileName else "$dir\\$fileName",
-                diskShare
+                diskShare, modifiedOn
             )
             continue
         }
@@ -153,7 +164,7 @@ fun addFileRecursively(localRoot: JFile, dir: String, diskShare: DiskShare) {
                 }
             }
         } else {
-            file.setLastModified(System.currentTimeMillis())
+            file.setLastModified(modifiedOn)
         }
     }
 }
