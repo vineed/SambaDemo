@@ -137,17 +137,23 @@ fun addFileRecursively(localRoot: JFile, dir: String, diskShare: DiskShare) {
 
         val bufReader = remoteSmbjFile.inputStream.buffered()
 
-        val bufWriter = FileOutputStream(
-            JFile(
-                localRoot.apply { mkdirs() },
-                fileName
-            )
-        ).buffered()
+        val file = JFile(
+            localRoot.apply { mkdirs() },
+            fileName
+        )
 
-        bufReader.use { reader ->
-            bufWriter.use { writer ->
-                reader.copyTo(writer)
+        val fileLastModTime = file.lastModified()
+
+        if (!file.exists() || fileLastModTime < fileIdBothDirectoryInformation.changeTime.toEpochMillis()) {
+            val bufWriter = FileOutputStream(file).buffered()
+
+            bufReader.use { reader ->
+                bufWriter.use { writer ->
+                    reader.copyTo(writer)
+                }
             }
+        } else {
+            file.setLastModified(System.currentTimeMillis())
         }
     }
 }
