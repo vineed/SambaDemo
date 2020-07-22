@@ -18,10 +18,10 @@ import kotlin.collections.HashSet
 class Utility private constructor() {
     companion object {
 
-        fun loadSambaWithSMBJ(filesDir: JFile, modifiedOn: Long) {
+        fun loadSambaWithSMBJ(url:String, filesDir: JFile, modifiedOn: Long) {
             val client = SMBClient()
 
-            client.connect("192.168.10.5").use { connection ->
+            client.connect(url).use { connection ->
                 val ac = AuthenticationContext.anonymous()
                 //AuthenticationContext("", "".toCharArray(), "")
                 val session: Session = connection.authenticate(ac)

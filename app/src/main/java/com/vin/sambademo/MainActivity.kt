@@ -43,7 +43,7 @@ class MainActivity : AppCompatActivity() {
                 var modifiedOn = System.currentTimeMillis()
                 modifiedOn -= modifiedOn % 1000 // skimming nanoseconds part
 
-                Utility.loadSambaWithSMBJ(filesDir, modifiedOn)
+                Utility.loadSambaWithSMBJ("192.168.2.190", filesDir, modifiedOn)
 
                 Utility.deleteNotTouchedFiles(filesDir, modifiedOn)
             }
@@ -53,7 +53,7 @@ class MainActivity : AppCompatActivity() {
     /*private fun loadSambaWithSMBJ(modifiedOn: Long) {
         val client = SMBClient()
 
-        client.connect("192.168.10.5").use { connection ->
+        client.connect("192.168.2.190").use { connection ->
             val ac = AuthenticationContext.anonymous()
             //AuthenticationContext("", "".toCharArray(), "")
             val session: Session = connection.authenticate(ac)
