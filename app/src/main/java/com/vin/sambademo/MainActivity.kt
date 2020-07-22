@@ -41,31 +41,19 @@ class MainActivity : AppCompatActivity() {
         bFiles.setOnClickListener {
             CoroutineScope(Dispatchers.Default).launch(coroutineExceptionHandler) {
                 var modifiedOn = System.currentTimeMillis()
-                modifiedOn -= modifiedOn%1000 // skimming nanoseconds part
+                modifiedOn -= modifiedOn % 1000 // skimming nanoseconds part
 
-                loadSambaWithSMBJ(modifiedOn)
+                Utility.loadSambaWithSMBJ(filesDir, modifiedOn)
 
-                //TODO recursively delete folder(s)/file(s) lesser than modifiedOn timestamp
-                val localPath = JFile(filesDir, "temp")
-
-                localPath.listFiles()?.forEach { file ->
-                    file.listFiles()?.filter { it.lastModified() < modifiedOn }
-                        ?.forEach {
-                            it.delete()
-                        }
-                }
-
-                localPath.listFiles()?.forEach { file->
-                    if (file.listFiles()?.isEmpty() == true) file.delete()
-                }
+                Utility.deleteNotTouchedFiles(filesDir, modifiedOn)
             }
         }
     }
 
-    private fun loadSambaWithSMBJ(modifiedOn: Long) {
+    /*private fun loadSambaWithSMBJ(modifiedOn: Long) {
         val client = SMBClient()
 
-        client.connect("192.168.2.190").use { connection ->
+        client.connect("192.168.10.5").use { connection ->
             val ac = AuthenticationContext.anonymous()
             //AuthenticationContext("", "".toCharArray(), "")
             val session: Session = connection.authenticate(ac)
@@ -81,10 +69,10 @@ class MainActivity : AppCompatActivity() {
                 localPath.mkdir()
 
                 diskShare?.let {
-                    addFileRecursively(localPath, "", it, modifiedOn)
+                    Utility.addFileRecursively(localPath, "", it, modifiedOn)
                 }
             }
-    }
+    }*/
 
     private suspend fun appendTextWithContext(text: String) = withContext(Dispatchers.Main) {
         appendText(text)
@@ -123,70 +111,9 @@ fun main(arr: Array<String>) {
         localPath.mkdir()
 
         diskShare?.let {
-            addFileRecursively(localPath, "", it, System.currentTimeMillis())
+            Utility.addFileRecursively(localPath, "", it, System.currentTimeMillis())
         }
     }
 }
 
 
-fun addFileRecursively(localRoot: JFile, dir: String, diskShare: DiskShare, modifiedOn: Long) {
-    for (fileIdBothDirectoryInformation in diskShare.list(dir)) {
-        val fileName = fileIdBothDirectoryInformation.fileName
-        println("File : $fileName")
-
-        if (fileName == "." || fileName == "..") continue
-
-        if (EnumWithValue.EnumUtils.isSet(
-                fileIdBothDirectoryInformation.fileAttributes,
-                FileAttributes.FILE_ATTRIBUTE_DIRECTORY
-            )
-        ) {
-            val fileDir = JFile(localRoot, fileName)
-
-            if (fileDir.exists()) {
-                fileDir.setLastModified(modifiedOn)
-            }
-            else{
-                fileDir.mkdir()
-            }
-
-            addFileRecursively(
-                fileDir,
-                if (dir.isBlank()) fileName else "$dir\\$fileName",
-                diskShare, modifiedOn
-            )
-            continue
-        }
-
-        val remoteSmbjFile: File = diskShare.openFile(
-            if (dir.isBlank()) fileName else "$dir\\$fileName",
-            EnumSet.of(AccessMask.GENERIC_ALL),
-            null,
-            SMB2ShareAccess.ALL,
-            SMB2CreateDisposition.FILE_OPEN,
-            null
-        )
-
-        val bufReader = remoteSmbjFile.inputStream.buffered()
-
-        val file = JFile(
-            localRoot.apply { mkdirs() },
-            fileName
-        )
-
-        val fileLastModTime = file.lastModified()
-
-        if (!file.exists() || fileLastModTime < fileIdBothDirectoryInformation.changeTime.toEpochMillis()) {
-            val bufWriter = FileOutputStream(file).buffered()
-
-            bufReader.use { reader ->
-                bufWriter.use { writer ->
-                    reader.copyTo(writer)
-                }
-            }
-        } else {
-            Log.d("Touched", "Touched $file")
-            file.setLastModified(modifiedOn)
-        }
-    }
-}
