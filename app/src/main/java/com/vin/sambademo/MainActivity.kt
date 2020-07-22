@@ -2,11 +2,13 @@ package com.vin.sambademo
 
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.hierynomus.msdtyp.AccessMask
 import com.hierynomus.msfscc.FileAttributes
 import com.hierynomus.mssmb2.SMB2CreateDisposition
 import com.hierynomus.mssmb2.SMB2ShareAccess
+import com.hierynomus.mssmb2.SMBApiException
 import com.hierynomus.protocol.commons.EnumWithValue
 import com.hierynomus.smbj.SMBClient
 import com.hierynomus.smbj.SmbConfig
@@ -15,10 +17,7 @@ import com.hierynomus.smbj.session.Session
 import com.hierynomus.smbj.share.DiskShare
 import com.hierynomus.smbj.share.File
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import java.io.FileOutputStream
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -28,12 +27,19 @@ import kotlin.collections.HashSet
 typealias JFile = java.io.File
 
 class MainActivity : AppCompatActivity() {
+
+    val coroutineExceptionHandler = CoroutineExceptionHandler { coroutineContext, throwable ->
+        CoroutineScope(Dispatchers.Main).launch {
+            Toast.makeText(this@MainActivity, "Connection failed!", Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         bFiles.setOnClickListener {
-            CoroutineScope(Dispatchers.IO).launch {
+            CoroutineScope(Dispatchers.Default).launch(coroutineExceptionHandler) {
                 var modifiedOn = System.currentTimeMillis()
                 modifiedOn -= modifiedOn%1000 // skimming nanoseconds part
 
@@ -47,8 +53,6 @@ class MainActivity : AppCompatActivity() {
                         ?.forEach {
                             it.delete()
                         }
-
-
                 }
 
                 localPath.listFiles()?.forEach { file->
@@ -67,19 +71,19 @@ class MainActivity : AppCompatActivity() {
             val session: Session = connection.authenticate(ac)
             val SHARE_NAME = "vin"
 
-            // Connect to Share
-            val diskShare = session.connectShare(SHARE_NAME) as DiskShare?
+                // Connect to Share
+                val diskShare = session.connectShare(SHARE_NAME) as DiskShare?
 
-            val smbShareSet: MutableSet<SMB2ShareAccess> = HashSet()
-            smbShareSet.addAll(SMB2ShareAccess.ALL)//.iterator().next()) // this is to get READ only
+                val smbShareSet: MutableSet<SMB2ShareAccess> = HashSet()
+                smbShareSet.addAll(SMB2ShareAccess.ALL)//.iterator().next()) // this is to get READ only
 
-            val localPath = JFile(filesDir, "temp")
-            localPath.mkdir()
+                val localPath = JFile(filesDir, "temp")
+                localPath.mkdir()
 
-            diskShare?.let {
-                addFileRecursively(localPath, "", it, modifiedOn)
+                diskShare?.let {
+                    addFileRecursively(localPath, "", it, modifiedOn)
+                }
             }
-        }
     }
 
     private suspend fun appendTextWithContext(text: String) = withContext(Dispatchers.Main) {
