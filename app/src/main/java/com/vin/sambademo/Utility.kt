@@ -22,8 +22,8 @@ class Utility private constructor() {
             val client = SMBClient()
 
             client.connect(url).use { connection ->
-                val ac = AuthenticationContext.anonymous()
-                //AuthenticationContext("", "".toCharArray(), "")
+                val ac = //AuthenticationContext.anonymous()
+                AuthenticationContext("Vineed", "macrocks".toCharArray(), "")
                 val session: Session = connection.authenticate(ac)
                 val SHARE_NAME = "vin"
 
@@ -52,7 +52,7 @@ class Utility private constructor() {
                 val fileName = fileIdBothDirectoryInformation.fileName
                 println("File : $fileName")
 
-                if (fileName == "." || fileName == "..") continue
+                if (fileName.startsWith(".")) continue
 
                 if (EnumWithValue.EnumUtils.isSet(
                         fileIdBothDirectoryInformation.fileAttributes,

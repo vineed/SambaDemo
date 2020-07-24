@@ -1,6 +1,8 @@
 package com.vin.sambademo
 
 import android.os.Bundle
+import android.os.Handler
+import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -19,6 +21,7 @@ import com.hierynomus.smbj.share.File
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.*
 import java.io.FileOutputStream
+import java.lang.Runnable
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.collections.HashSet
@@ -29,6 +32,7 @@ typealias JFile = java.io.File
 class MainActivity : AppCompatActivity() {
 
     val coroutineExceptionHandler = CoroutineExceptionHandler { coroutineContext, throwable ->
+        throwable.printStackTrace()
         CoroutineScope(Dispatchers.Main).launch {
             Toast.makeText(this@MainActivity, "Connection failed!", Toast.LENGTH_LONG).show()
         }
@@ -39,40 +43,41 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         bFiles.setOnClickListener {
-            CoroutineScope(Dispatchers.Default).launch(coroutineExceptionHandler) {
-                var modifiedOn = System.currentTimeMillis()
-                modifiedOn -= modifiedOn % 1000 // skimming nanoseconds part
+            //CoroutineScope(Dispatchers.Default).launch(coroutineExceptionHandler) {
+            /*var modifiedOn = System.currentTimeMillis()
+            modifiedOn -= modifiedOn % 1000 // skimming nanoseconds part
 
-                Utility.loadSambaWithSMBJ("192.168.2.190", filesDir, modifiedOn)
+            Utility.loadSambaWithSMBJ("192.168.2.190", filesDir, modifiedOn)
 
-                Utility.deleteNotTouchedFiles(filesDir, modifiedOn)
-            }
+            Utility.deleteNotTouchedFiles(filesDir, modifiedOn)*/
+
+            runPeriodicSync(0)
+            ///}
         }
     }
 
-    /*private fun loadSambaWithSMBJ(modifiedOn: Long) {
-        val client = SMBClient()
+    val interval = TimeUnit.MINUTES.toMillis(1)
+    val handler = Handler()
+    val runnable = Runnable {
+        CoroutineScope(Dispatchers.Default).launch(coroutineExceptionHandler) {
+            var modifiedOn = System.currentTimeMillis()
+            modifiedOn -= modifiedOn % 1000 // skimming nanoseconds part
 
-        client.connect("192.168.2.190").use { connection ->
-            val ac = AuthenticationContext.anonymous()
-            //AuthenticationContext("", "".toCharArray(), "")
-            val session: Session = connection.authenticate(ac)
-            val SHARE_NAME = "vin"
+            Utility.loadSambaWithSMBJ("192.168.10.5", filesDir, modifiedOn)
 
-                // Connect to Share
-                val diskShare = session.connectShare(SHARE_NAME) as DiskShare?
+            Utility.deleteNotTouchedFiles(filesDir, modifiedOn)
 
-                val smbShareSet: MutableSet<SMB2ShareAccess> = HashSet()
-                smbShareSet.addAll(SMB2ShareAccess.ALL)//.iterator().next()) // this is to get READ only
+        }
 
-                val localPath = JFile(filesDir, "temp")
-                localPath.mkdir()
+        //runPeriodicSync(interval)
+    }
 
-                diskShare?.let {
-                    Utility.addFileRecursively(localPath, "", it, modifiedOn)
-                }
-            }
-    }*/
+    private fun runPeriodicSync(interval: Long) {
+        if (!isDestroyed) {
+            Toast.makeText(this, "Sync in progress..", Toast.LENGTH_SHORT).show()
+            handler.postDelayed(runnable, interval)
+        }
+    }
 
     private suspend fun appendTextWithContext(text: String) = withContext(Dispatchers.Main) {
         appendText(text)
